@@ -8,7 +8,7 @@ $Event_Note = "[訂購前須知]";
 $Event_FB_URL = "https://www.facebook.com/wwtsa2019/";
 $Event_API_EndPoint = "https://event.worldwidetsa.org/api.php";
 $Event_Logo_URL = "https://free.com.tw/blog/wp-content/uploads/2014/08/Placekitten480-g.jpg";
-$Event_Logo_URL = "https://www.worldwidetsa.org/wp-content/uploads/2019/08/WWTSALOGO.jpg";
+$Event_Logo_URL = "https://www.worldwidetsa.org/wp-content/uploads/2019/08/WWTSA-LOGO-new.png";
 $Event_Agreement_URL = "#";
 
 ?>
@@ -16,7 +16,7 @@ $Event_Agreement_URL = "#";
 <html lang="en">
   <head>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" integrity="sha256-rByPlHULObEjJ6XQxW/flG2r+22R5dKiAoef+aXWfik=" crossorigin="anonymous" />
-    <link rel="icon" href="https://www.worldwidetsa.org/wp-content/uploads/2019/08/cropped-WWTSALOGO-1-32x32.jpg" sizes="32x32">
+    <link rel="icon" href="https://www.worldwidetsa.org/wp-content/uploads/2019/08/cropped-WWTSA-LOGO-new-32x32.png" sizes="32x32">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" integrity="sha256-KM512VNnjElC30ehFwehXjx1YCHPiQkOPmqnrWtpccM=" crossorigin="anonymous"></script>
     <script>
