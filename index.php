@@ -71,7 +71,7 @@ $Event_Agreement_URL = "#";
         updatePrice();
         $( "#DOB" ).datepicker({
             dateFormat: "yy/mm/dd",
-            maxDate: new Date("2005/12/31"),
+            maxDate: new Date("2001/12/31"),
             changeMonth: true,
             changeYear: true
         });
