@@ -82,6 +82,21 @@ $Event_Agreement_URL = "#";
         });
         $("#purchaseForm").submit(function( event ){
             alert("我還沒做完這塊，但也不想讓你有機會玩壞");
+            console.log(`
+                Name: ${$("#Name").val()}
+                EnglishName: ${$("#EnglishName").val()}
+                Phone: ${$("#Phone").val()}
+                Email: ${$("#Email").val()}
+                PersonalId: ${$("#PersonalId").val()}
+                DOB: ${$("#DOB").val()}
+                EmerContactName: ${$("#EmerContactName").val()}
+                EmerContactNum: ${$("#EmerContactNum").val()}
+                School: ${$("#School").val()}
+                TSAOfficerRole: ${$("#TSAOfficerRole").val()}
+                RepresentTSA: ${$("#RepresentTSA").val()}
+                PaymentMethod: ${$("#PaymentMethod").val()}
+                PromoCode: ${$("#promoCodeData").val()}
+            `);
             event.preventDefault();
         });
         $("#paymentMethod").change(function( event ){
@@ -199,12 +214,12 @@ $Event_Agreement_URL = "#";
             </div>
 
             <div class="mb-3">
-                <label for="phone">聯絡電話(含國碼)</label>
+                <label for="Phone">聯絡電話(含國碼)</label>
                 <div class="input-group">
                     <div class="input-group-prepend">
                     <span class="input-group-text">+</span>
                     </div>
-                    <input type="text" class="form-control" id="phone" placeholder="886912345678" required>
+                    <input type="text" class="form-control" id="Phone" placeholder="886912345678" required>
                     <div class="invalid-feedback" style="width: 100%;">
                         連絡電話為必填
                     </div>
@@ -212,8 +227,8 @@ $Event_Agreement_URL = "#";
             </div>
 
             <div class="mb-3">
-                <label for="email">Email (電子信箱) <span class="text-muted">(必填)</span></label>
-                <input type="email" class="form-control" id="email" placeholder="myemail@example.com" required>
+                <label for="Email">Email (電子信箱) <span class="text-muted">(必填)</span></label>
+                <input type="Email" class="form-control" id="Email" placeholder="myemail@example.com" required>
                 <div class="invalid-feedback">
                     請輸入正確的Email地址
                 </div>
@@ -285,7 +300,7 @@ $Event_Agreement_URL = "#";
             <h4 class="mb-3">付款方式</h4>
 
             <div class="d-block my-3">
-                <select class="custom-select d-block w-100" id="paymentMethod" name="paymentMethod" required>
+                <select class="custom-select d-block w-100" id="PaymentMethod" name="paymentMethod" required>
                   <option value="Credit">信用卡</option>
                   <option value="BARCODE">超商條碼</option>
                   <option value="CVS">超商代碼</option>
