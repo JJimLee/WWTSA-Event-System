@@ -82,6 +82,14 @@ $Event_Agreement_URL = "#";
         });
         $("#purchaseForm").submit(function( event ){
             alert("我還沒做完這塊，但也不想讓你有機會玩壞");
+            
+            if ($("#RepresentTSA-YES").is(':checked')){
+                $("#RepresentTSA").val("YES");
+            }
+            else if ($("#RepresentTSA-NO").is(':checked')){
+                $("#RepresentTSA").val("NO");
+            }
+            
             console.log(`
                 Name: ${$("#Name").val()}
                 EnglishName: ${$("#EnglishName").val()}
@@ -285,13 +293,14 @@ $Event_Agreement_URL = "#";
             <div class="d-block my-3">
             <label>是否代表貴學生會參與此次晚會? <span class="text-muted">(必填)</span></label>
               <div class="custom-control custom-radio">
-                <input id="RepresentTSA-NO" name="RepresentTSA" type="radio" value="No" class="custom-control-input" required>
+                <input id="RepresentTSA-NO" name="RepresentTSA" type="radio" value="No" class="custom-control-input" checked required>
                 <label class="custom-control-label" for="RepresentTSA-NO">否</label>
               </div>
               <div class="custom-control custom-radio">
-                <input id="RepresentTSA-YES" name="RepresentTSA" type="radio" value="Yes" class="custom-control-input" checked required>
+                <input id="RepresentTSA-YES" name="RepresentTSA" type="radio" value="Yes" class="custom-control-input" required>
                 <label class="custom-control-label" for="RepresentTSA-YES">是</label>
               </div>
+              <input id="RepresentTSA" type="hidden" name="RepresentTSA">
             </div>
             <hr class="mb-4">
 
