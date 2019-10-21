@@ -77,6 +77,7 @@ $Event_Agreement_URL = "#";
         });
         $("#promoForm").submit(function( event ){
             updatePrice($("#promoCode").val());
+            $("#promoCodeData").val($("#promoCode").val());
             event.preventDefault();
         });
         $("#purchaseForm").submit(function( event ){
@@ -94,7 +95,6 @@ $Event_Agreement_URL = "#";
                 console.log("docTop:"+$(document).scrollTop());
                 console.log("purchaseFormTop:"+purchaseFormTop);
                 if (purchaseFormTop > $(document).scrollTop()){
-                    //purchaseFormTop = $('.always-on-top').offset().top;
                     $('.always-on-top').css('top', 0);
                 }
                 else{
@@ -180,7 +180,7 @@ $Event_Agreement_URL = "#";
 		</div>
     <div class="col-md-8 order-md-1">
         <h4 class="mb-3">訂票資訊</h4>
-        <form class="needs-validation" id="purchaseForm">
+        <form class="needs-validation" id="purchaseForm" novalidate>
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="Name">中文姓名</label>
@@ -300,6 +300,7 @@ $Event_Agreement_URL = "#";
               <label class="custom-control-label" for="agreement">本人已詳讀<a href="<?=$Event_Agreement_URL?>">活動辦法</a>與確認上述資料填寫無誤，且同意提供個人資料予主辦單位使用，同時主辦單位將尊重個人資料機密予以嚴格保密。</label>
             </div>
             <hr class="mb-4">
+            <input id="promoCodeData" type="hidden" name="promoCode">
             <button class="btn btn-primary btn-lg btn-block" type="submit">確認訂購</button>
         </form>
     </div>
