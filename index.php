@@ -107,8 +107,6 @@ $Event_Agreement_URL = "#";
             $('.always-on-top').css('height', "0px");
             purchaseFormTop = $('.always-on-top').offset().top;
             $(document).scroll(function(){
-                console.log("docTop:"+$(document).scrollTop());
-                console.log("purchaseFormTop:"+purchaseFormTop);
                 if (purchaseFormTop > $(document).scrollTop()){
                     $('.always-on-top').css('top', 0);
                 }
