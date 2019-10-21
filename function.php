@@ -48,7 +48,7 @@ function ECPay_GetMacValue($arParameters) {
     return $sMacValue ;
 }
 
-function ECPay_NewOrder($PaymentName, $PaymentAmount, $PaymentDescription, $PaymentMethod=null){
+function ECPay_NewOrder($PaymentName, $PaymentDescription, $PaymentAmount, $PaymentMethod=null){
     global $ECPay_MerchantID, $Clark_ReturnURL, $Clark_ClientBackURL;
     
     switch($PaymentMethod){
@@ -209,5 +209,20 @@ function API_getOrderItems($productCode="default", $paymentMethod="Credit"){
     else{
         return API_ToJSON(true, $result);
     }
+}
+
+function API_getOrderSum($data){
+    $sum = 0;
+    foreach($data as $value){
+        $sum += $value['Price'];
+    }
+    return $sum;
+}
+
+function API_processOrder($productCode="default", $paymentMethod="Credit"){
+    $result = API_getPackage($productCode, $paymentMethod);
+    $sum = API_getOrderSum($result);
+    $data = ECPay_NewOrder($result[0]['Name'], $result[0]['Description'], $sum, $paymentMethod);
+    ECPay_SubmitForm($data);
 }
 ?>
