@@ -1,0 +1,6 @@
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule (.*) https://event.worldwidetsa.org%{REQUEST_URI} [R,L]
+
+php_flag display_errors on
+
