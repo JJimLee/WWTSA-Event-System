@@ -19,6 +19,16 @@ switch($_POST['action']){
             echo API_getOrderItems();
         }
         break;
+    case "createOrder":
+        // process data(Record to database)
+        // Send out confirmation email
+        // Redirect to paymentLink generator
+        break;
+    case "GeneratePaymentLink":
+        // Generate payment link
+        // Record to database
+        // POST Redirect
+        break;
     default:
         $API_ToJSON();
         exit();
