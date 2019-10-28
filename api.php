@@ -20,6 +20,7 @@ switch($_POST['action']){
         }
         break;
     case "createOrder":
+        
         // process data(Record to database)
         // Send out confirmation email
         // Redirect to paymentLink generator

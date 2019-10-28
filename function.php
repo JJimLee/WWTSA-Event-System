@@ -11,6 +11,7 @@ if (empty($includeFunction) || !$includeFunction){
     exit();
 }
 include_once("config.php");
+include_once("MYSQLConnect.php");
 
 
 function ECPay_GetMacValue($arParameters) {
@@ -227,12 +228,36 @@ function API_getOrderSum($data){
     return $sum;
 }
 
-function API_processOrder($productCode="default", $paymentMethod="Credit"){
-    $result = API_getPackage($productCode, $paymentMethod);
+function API_processOrder($promoCode="default", $paymentMethod="Credit"){
+    global $EVENT_ID;
+    if (empty($_POST['Name']) || empty($_POST['EnglishName']) || empty($_POST['Phone']) || empty($_POST['Email']) || empty($_POST['PersonalId']) || empty($_POST['DOB']) || 
+        empty($_POST['EmerContactName']) || empty($_POST['EmerContactNum']) || empty($_POST['School']) || empty($_POST['TSAOfficerRole']) || empty($_POST['RepresentTSA'])){
+        return API_ToJSON(false, array("msg" => "Missing field"));
+    }
+    $ContactId = MYSQL_AddContactInfo($_POST['Name'], $_POST['EnglishName'], $_POST['Phone'], $_POST['Email'], $_POST['PersonalId'], $_POST['DOB'], 
+        $_POST['EmerContactName'], $_POST['EmerContactNum'], $_POST['School'], $_POST['TSAOfficerRole'], $_POST['RepresentTSA']
+    );
+    if (!$ContactId){
+        return API_ToJSON(false, array("msg" => "Error while insert ContactInfo"));
+    }
+    
+    $result = API_getPackage($promoCode, $paymentMethod);
     $sum = API_getOrderSum($result);
     $data = ECPay_NewOrder($result[0]['Name'], $result[0]['Description'], $sum, $paymentMethod);
+    if ($result[0]['Price'] + $result[1]['Price'] == $sum){
+        $orderId = MYSQL_AddOrder($data['MerchantTradeNo'], $result[0]['Price'], $result[1]['Price']);
+    }
+    else{
+        $orderId = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $sum, 0, $promoCode);
+    }
+    
+    if (!$orderId){
+        return API_ToJSON(false, array("msg" => "Error while insert Order"));
+    }
     ECPay_SubmitForm($data);
+    return API_ToJSON(false, array("msg" => "Order '"+ $data['MerchantTradeNo'] +"' Created"));
 }
+
 
 function SMTP_Sender($Name, $Email, $Subject, $Content){
     global $SMTP_Name, $SMTP_Account, $SMTP_Password, $SMTP_Server;
@@ -279,5 +304,171 @@ function SMTP_Sender($Name, $Email, $Subject, $Content){
     } else {
         echo 'Message sent!';
     }
+}
+
+function MYSQL_Run($query){
+    if ($mysqli->query($query) === TRUE) {
+        return $mysqli->insert_id;
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return 0;
+    }
+}
+
+function MYSQL_AddOrder($id, $ContactId, $EventId, $Price, $Fee, $PromoCode){
+    $query = "
+        INSERT INTO Order (id, ContactId, EventId, Price, Fee, PromoCode)
+        OUTPUT Inserted.ID
+        VALUES ('$id', '$ContactId', '$EventId', '$Price', '$Fee', '$PromoCode');
+    ";
+    $query = "
+        INSERT INTO `ContactInfo` (Name, EnglishName, Phone, Email, PersonalId, DOB, EmerContactName, EmerContactNum, School, TSAOfficerRole, RepresentTSA)
+        VALUES ('$Name', '$EnglishName', '$Phone', '$Email', '$PersonalId', '$DOB', '$EmerContactName', '$EmerContactNum', '$School', '$TSAOfficerRole', '$RepresentTSA');
+    ";
+    return MYSQL_Run($query);
+    /*
+        INSERT INTO table (name)
+        OUTPUT Inserted.ID
+        VALUES('');
+        
+        ContactId INT(6),
+        EventId INT(6),
+        Price INT(6),
+        Fee INT(6),
+        PromoCode VARCHAR(50) NOT NULL
+    */
+}
+
+function MYSQL_AddEvent($EventName, $EventDate){
+    
+    /*
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        EventName VARCHAR(200) NOT NULL,
+        EventDate DATE
+    */
+}
+
+function MYSQL_AddContactInfo($Name, $EnglishName, $Phone, $Email, $PersonalId, $DOB, $EmerContactName, $EmerContactNum, $School, $TSAOfficerRole, $RepresentTSA){
+    $query = "
+        INSERT INTO `ContactInfo` (Name, EnglishName, Phone, Email, PersonalId, DOB, EmerContactName, EmerContactNum, School, TSAOfficerRole, RepresentTSA)
+        VALUES ('$Name', '$EnglishName', '$Phone', '$Email', '$PersonalId', '$DOB', '$EmerContactName', '$EmerContactNum', '$School', '$TSAOfficerRole', '$RepresentTSA');
+    ";
+    return MYSQL_Run($query);
+    /*
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        Name VARCHAR(200) NOT NULL,
+        EnglishName VARCHAR(200) NOT NULL,
+        Phone VARCHAR(20) NOT NULL,
+        Email VARCHAR(200) NOT NULL,
+        PersonalId VARCHAR(20) NOT NULL,
+        DOB DATE,
+        EmerContactName VARCHAR(200) NOT NULL,
+        EmerContactNum VARCHAR(20) NOT NULL,
+        School VARCHAR(200) NOT NULL,
+        TSAOfficerRole VARCHAR(20) NOT NULL,
+        RepresentTSA BOOL
+    */
+}
+
+function MYSQL_Init(){
+    global $mysqli;
+    if (empty($mysqli)){
+        echo "Error with MySQL during Init process";
+        exit();
+    }
+    $query = "CREATE TABLE `ContactInfo` (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        Name VARCHAR(200) NOT NULL,
+        EnglishName VARCHAR(200) NOT NULL,
+        Phone VARCHAR(20) NOT NULL,
+        Email VARCHAR(200) NOT NULL,
+        PersonalId VARCHAR(20) NOT NULL,
+        DOB DATE,
+        EmerContactName VARCHAR(200) NOT NULL,
+        EmerContactNum VARCHAR(20) NOT NULL,
+        School VARCHAR(200) NOT NULL,
+        TSAOfficerRole VARCHAR(20) NOT NULL,
+        RepresentTSA BOOL
+    )";
+    if ($mysqli->query($query) === TRUE) {
+        echo "DB: ContactInfo init success\n"; // Success
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+    
+    $query = "CREATE TABLE `Event` (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        EventName VARCHAR(200) NOT NULL,
+        EventDate DATE
+    )";
+    if ($mysqli->query($query) === TRUE) {
+        echo "DB: Event init success\n"; // Success
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+    
+    $query = "CREATE TABLE `Order` (
+        id VARCHAR(25) PRIMARY KEY,
+        ContactId INT(6),
+        EventId INT(6),
+        Price INT(6),
+        Fee INT(6),
+        PromoCode VARCHAR(50) NOT NULL
+    )";
+    if ($mysqli->query($query) === TRUE) {
+        echo "DB: Order init success\n"; // Success
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+    
+    $query = "CREATE TABLE `Payment` (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        PaymentMethod VARCHAR(10) NOT NULL,
+        TotalAmount INT(6),
+        Status INT(6),
+        Data JSON,
+        OrderId INT(6)
+    )";
+    if ($mysqli->query($query) === TRUE) {
+        echo "DB: Payment init success\n"; // Success
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+    
+    $query = "CREATE TABLE `Ticket` (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        ContactId INT(6),
+        EventId INT(6),
+        OrderId INT(6),
+        PaymentId INT(6)
+    )";
+    if ($mysqli->query($query) === TRUE) {
+        echo "DB: Ticket init success\n"; // Success
+        return true;
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+    
+    $query = "CREATE TABLE `Coupon` (
+        id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        CouponCode VARCHAR(200) NOT NULL,
+        UsedCount INT(6) DEFAULT 0,
+        TotalCount INT(6),
+        Remark VARCHAR(200) NOT NULL,
+        IssueDate DATE DEFAULT GETDATE()
+    )";
+    if ($mysqli->query($query) === TRUE) {
+        echo "DB: Coupon init success\n"; // Success
+        return true;
+    }else{
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+    
 }
 ?>
