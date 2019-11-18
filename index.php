@@ -1,15 +1,80 @@
 <?php
-$Event_Name = "世學聯年終大活動";
+$Event_Name = "世界台灣學生會聯合總會<br>歲末倒流年終晚會";
 $Event_Organizer = "世學聯";
-$Event_Description = "[活動簡介]";
+$Event_Description = "為了增加台灣海外留學生們相互認識與交流的機會，並使活動參與者體驗與日常生活中不一樣的生活，配合著2020新年的來臨，世學聯計畫舉辦一場新年復古派對。希望透過此活動能讓參與者感受到台灣早期80年代的魅力，亦讓所有參加者互動更加熱絡，讓台灣年輕世代學會互相扶持，壯大全世界台灣留學生之間的感情，一起準備迎接嶄新的2020年!";
 $Event_Website_URL = "https://www.worldwidetsa.org/";
 $Event_Email = "wwtsa2019@gmail.com";
-$Event_Note = "[訂購前須知]";
+$Event_Note = "本單位所售出之活動票券恕無法辦理退換票，且售出之門票限本人使用。";
 $Event_FB_URL = "https://www.facebook.com/wwtsa2019/";
 $Event_API_EndPoint = "https://event.worldwidetsa.org/api.php";
 $Event_Logo_URL = "https://free.com.tw/blog/wp-content/uploads/2014/08/Placekitten480-g.jpg";
 $Event_Logo_URL = "https://www.worldwidetsa.org/wp-content/uploads/2019/08/WWTSA-LOGO-new.png";
-$Event_Agreement_URL = "#";
+$Event_Agreement_URL = "購票須知.pdf";
+
+$DevMode = false;
+$PromoCode = "";
+$PaymentPage = "";
+if (isset($_GET['promo'])){
+    $PaymentPage .= "updatePrice('".$_GET['promo']."');";
+    $PromoCode = $_GET['promo'];
+}
+if (isset($_GET['order'])){
+    $PaymentPage .= "
+        var postData =  {
+            action:\"getPaymentInfo\", 
+            orderId: \"".$_GET['order']."\"
+        };
+        $.ajax({
+            url: \"$Event_API_EndPoint\",
+            method: \"POST\",
+            data: postData
+        }).done(function( data ) {
+            data=JSON.parse(data);
+            if (data.success == true){
+                $(\"#mainDiv\").html(\"<h4 class=\\\"mb-3\\\">付款資訊</h4>\"+data.result.html);
+            }
+        });
+    
+    ";
+}
+
+$DevMode_SubmitOutput = "";
+$DevMode_fillDemo = "";
+if ($DevMode){
+    $DevMode_SubmitOutput = "
+            console.log(`
+                Name: \${\$(\"#Name\").val()}
+                EnglishName: \${\$(\"#EnglishName\").val()}
+                Phone: \${\$(\"#Phone\").val()}
+                Email: \${\$(\"#Email\").val()}
+                PersonalId: \${\$(\"#PersonalId\").val()}
+                DOB: \${\$(\"#DOB\").val()}
+                EmerContactName: \${\$(\"#EmerContactName\").val()}
+                EmerContactNum: \${\$(\"#EmerContactNum\").val()}
+                School: \${\$(\"#School\").val()}
+                TSAOfficerRole: \${\$(\"#TSAOfficerRole\").val()}
+                RepresentTSA: \${\$(\"#RepresentTSA\").val()}
+                PaymentMethod: \${\$(\"#PaymentMethod\").val()}
+                PromoCode: \${\$(\"#PromoCodeData\").val()}
+            `);";
+    $DevMode_fillDemo = "
+    function fillDemo(){
+        $(\"#Name\").val(\"陳叙儒\")
+        $(\"#EnglishName\").val(\"Clark Chen\")
+        $(\"#Phone\").val(\"5133997124\")
+        $(\"#Email\").val(\"clark@clark-chen.com\")
+        $(\"#PersonalId\").val(\"A123456789\")
+        $(\"#DOB\").val(\"1998/09/13\")
+        $(\"#EmerContactName\").val(\"Sherry\")
+        $(\"#EmerContactNum\").val(\"6692463144\")
+        $(\"#School\").val(\"University of Illinois at Chicago\")
+        $(\"#TSAOfficerRole\").val(\"President\")
+        $(\"#RepresentTSA\").val(\"YES\")
+        $(\"#PaymentMethod\").val(\"Credit\")
+        $(\"#PromoCodeData\").val()
+    }
+    ";
+}
 
 ?>
 <!doctype html>
@@ -32,7 +97,13 @@ $Event_Agreement_URL = "#";
             </li>
         `;
     }
-    function updatePrice(PromoCode=null){
+    function retrieveOrder(){
+        <?=$PaymentPage?>
+    }
+    <?=$DevMode_fillDemo?>
+    function updatePrice(promoCode=null){
+        $("#promoCode").val(promoCode);
+        $("#PromoCodeData").val(promoCode);
         $("#orderItems").html(`
             <li class="list-group-item d-flex justify-content-between">
                 <div class="spinner-border text-primary" role="status">
@@ -42,7 +113,7 @@ $Event_Agreement_URL = "#";
         `);
         $("#itemCount").html("~");
         
-        var postData = {action:"getOrderItems", promo:PromoCode, paymentMethod:$("#paymentMethod").val() };
+        var postData = {action:"getOrderItems", PromoCode:promoCode, PaymentMethod:$("#PaymentMethod").val() };
         $.ajax({
             url: "<?=$Event_API_EndPoint?>",
             method: "POST",
@@ -68,7 +139,8 @@ $Event_Agreement_URL = "#";
         var isMobile = window.matchMedia("only screen and (max-width: 760px)").matches;
         
         
-        updatePrice();
+        updatePrice($("#promoCode").val());
+        retrieveOrder();
         $( "#DOB" ).datepicker({
             dateFormat: "yy/mm/dd",
             maxDate: new Date("2001/12/31"),
@@ -77,37 +149,52 @@ $Event_Agreement_URL = "#";
         });
         $("#promoForm").submit(function( event ){
             updatePrice($("#promoCode").val());
-            $("#promoCodeData").val($("#promoCode").val());
             event.preventDefault();
         });
         $("#purchaseForm").submit(function( event ){
-            alert("我還沒做完這塊，但也不想讓你有機會玩壞");
-            
+            //alert("我還沒做完這塊，但也不想讓你有機會玩壞");
+            $("#SubmitBtn").prop('disabled', true);
             if ($("#RepresentTSA-YES").is(':checked')){
                 $("#RepresentTSA").val("YES");
             }
             else if ($("#RepresentTSA-NO").is(':checked')){
                 $("#RepresentTSA").val("NO");
             }
+            if (!$("#agreement").is(':checked')){
+                alert("請先同意 本人已詳讀活動辦法與確認上述資料填寫無誤，且同意提供個人資料予主辦單位使用，同時主辦單位將尊重個人資料機密予以嚴格保密。");
+                return false;
+            }
+            <?=$DevMode_SubmitOutput?>
             
-            console.log(`
-                Name: ${$("#Name").val()}
-                EnglishName: ${$("#EnglishName").val()}
-                Phone: ${$("#Phone").val()}
-                Email: ${$("#Email").val()}
-                PersonalId: ${$("#PersonalId").val()}
-                DOB: ${$("#DOB").val()}
-                EmerContactName: ${$("#EmerContactName").val()}
-                EmerContactNum: ${$("#EmerContactNum").val()}
-                School: ${$("#School").val()}
-                TSAOfficerRole: ${$("#TSAOfficerRole").val()}
-                RepresentTSA: ${$("#RepresentTSA").val()}
-                PaymentMethod: ${$("#PaymentMethod").val()}
-                PromoCode: ${$("#promoCodeData").val()}
-            `);
+            var postData =  {   action:"createOrder", 
+                                Name: $("#Name").val(),
+                                EnglishName: $("#EnglishName").val(),
+                                Phone: $("#Phone").val(),
+                                Email: $("#Email").val(),
+                                PersonalId: $("#PersonalId").val(),
+                                DOB: $("#DOB").val(),
+                                EmerContactName: $("#EmerContactName").val(),
+                                EmerContactNum: $("#EmerContactNum").val(),
+                                School: $("#School").val(),
+                                TSAOfficerRole: $("#TSAOfficerRole").val(),
+                                RepresentTSA: $("#RepresentTSA").val(),
+                                PaymentMethod: $("#PaymentMethod").val(),
+                                PromoCode: $("#PromoCodeData").val()
+                            };
+            $.ajax({
+                url: "<?=$Event_API_EndPoint?>",
+                method: "POST",
+                data: postData
+            }).done(function( data ) {
+                data=JSON.parse(data);
+                if (data.success == true){
+                    $("#mainDiv").html("<h4 class=\"mb-3\">付款資訊</h4>"+data.result.html);
+                }
+            });
+            
             event.preventDefault();
         });
-        $("#paymentMethod").change(function( event ){
+        $("#PaymentMethod").change(function( event ){
             updatePrice($("#promoCode").val());
         });
         
@@ -156,7 +243,7 @@ $Event_Agreement_URL = "#";
         </div>
         <div class="navbar navbar-dark bg-dark shadow-sm">
             <div class="container d-flex justify-content-between">
-            <a href="#" class="navbar-brand d-flex align-items-center">
+            <a href="/" class="navbar-brand d-flex align-items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2" focusable="false" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                 <strong><?=$Event_Organizer?>售票系統</strong>
             </a>
@@ -192,16 +279,16 @@ $Event_Agreement_URL = "#";
 
             <form class="card p-2" id="promoForm">
                 <div class="input-group">
-                    <input id="promoCode" type="text" class="form-control" placeholder="優惠折扣碼">
+                    <input id="promoCode" type="text" class="form-control" placeholder="優惠折扣碼" value="<?=$PromoCode?>">
                     <div class="input-group-append">
                         <button type="submit" class="btn btn-secondary">使用</button>
                     </div>
                 </div>
             </form>
         </div>
-        <div class="col-md-8 order-md-1">
+        <div id="mainDiv" class="col-md-8 order-md-1">
             <h4 class="mb-3">訂票資訊</h4>
-            <form class="needs-validation" id="purchaseForm" novalidate>
+            <form class="needs-validation" id="purchaseForm">
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="Name">中文姓名</label>
@@ -319,11 +406,11 @@ $Event_Agreement_URL = "#";
                 </div>
                 <div class="custom-control custom-checkbox">
                   <input type="checkbox" class="custom-control-input" id="agreement" required>
-                  <label class="custom-control-label" for="agreement">本人已詳讀<a href="<?=$Event_Agreement_URL?>">活動辦法</a>與確認上述資料填寫無誤，且同意提供個人資料予主辦單位使用，同時主辦單位將尊重個人資料機密予以嚴格保密。</label>
+                  <label class="custom-control-label" for="agreement">本人已詳讀<a target="_blank" href="<?=$Event_Agreement_URL?>">活動辦法</a>與確認上述資料填寫無誤，且同意提供個人資料予主辦單位使用，同時主辦單位將尊重個人資料機密予以嚴格保密。</label>
                 </div>
                 <hr class="mb-4">
-                <input id="promoCodeData" type="hidden" name="promoCode">
-                <button class="btn btn-primary btn-lg btn-block" type="submit">確認訂購</button>
+                <input id="PromoCodeData" type="hidden" name="promoCode">
+                <button id="SubmitBtn" class="btn btn-primary btn-lg btn-block" type="submit">確認訂購</button>
             </form>
         </div>
     </div>
