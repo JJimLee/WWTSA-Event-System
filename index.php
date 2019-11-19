@@ -11,7 +11,7 @@ $Event_Logo_URL = "https://free.com.tw/blog/wp-content/uploads/2014/08/Placekitt
 $Event_Logo_URL = "https://www.worldwidetsa.org/wp-content/uploads/2019/08/WWTSA-LOGO-new.png";
 $Event_Agreement_URL = "購票須知.pdf";
 
-$DevMode = false;
+$DevMode = false || (isset($_GET['debug']) && $_GET['debug'] == 1);
 $PromoCode = "";
 $PaymentPage = "";
 if (isset($_GET['promo'])){
@@ -49,6 +49,7 @@ if ($DevMode){
                 Email: \${\$(\"#Email\").val()}
                 PersonalId: \${\$(\"#PersonalId\").val()}
                 DOB: \${\$(\"#DOB\").val()}
+                Gender: \${\$(\"#Gender\").val()}
                 EmerContactName: \${\$(\"#EmerContactName\").val()}
                 EmerContactNum: \${\$(\"#EmerContactNum\").val()}
                 School: \${\$(\"#School\").val()}
@@ -65,6 +66,7 @@ if ($DevMode){
         $(\"#Email\").val(\"clark@clark-chen.com\")
         $(\"#PersonalId\").val(\"A123456789\")
         $(\"#DOB\").val(\"1998/09/13\")
+        $(\"#Gender\").val(\"Male\")
         $(\"#EmerContactName\").val(\"Sherry\")
         $(\"#EmerContactNum\").val(\"6692463144\")
         $(\"#School\").val(\"University of Illinois at Chicago\")
@@ -164,6 +166,10 @@ if ($DevMode){
                 alert("請先同意 本人已詳讀活動辦法與確認上述資料填寫無誤，且同意提供個人資料予主辦單位使用，同時主辦單位將尊重個人資料機密予以嚴格保密。");
                 return false;
             }
+            
+            if ($("#TSAOfficerRole").val() == ""){
+                $("#TSAOfficerRole").val("無")
+            }
             <?=$DevMode_SubmitOutput?>
             
             var postData =  {   action:"createOrder", 
@@ -173,6 +179,7 @@ if ($DevMode){
                                 Email: $("#Email").val(),
                                 PersonalId: $("#PersonalId").val(),
                                 DOB: $("#DOB").val(),
+                                Gender: $("#Gender").val(),
                                 EmerContactName: $("#EmerContactName").val(),
                                 EmerContactNum: $("#EmerContactNum").val(),
                                 School: $("#School").val(),
@@ -342,7 +349,19 @@ if ($DevMode){
                         請輸入正確的出生年月日 用於保險用途
                     </div>
                 </div>
-
+                
+                <div class="mb-3">
+                    <label for="Gender">性別 <span class="text-muted">(必填)</span></label>
+                    <select class="custom-select d-block w-100" id="Gender" name="Gender" required>
+                      <option value="Male">男</option>
+                      <option value="Female">女</option>
+                      <option value="NULL">不提供</option>
+                    </select>
+                    <div class="invalid-feedback">
+                      請選擇一個有效的性別 用於保險用途
+                    </div>
+                </div>
+                
                 <div class="mb-3">
                     <label for="EmerContactName">緊急聯絡人姓名 <span class="text-muted">(必填)</span></label>
                     <input type="EmerContactName" class="form-control" id="EmerContactName" placeholder="" required>

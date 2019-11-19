@@ -110,6 +110,9 @@ function ECPay_PayOrder($data){
 
 function ECPay_PrintReceipt($EmailCopy = false, $isServer = false){
     $ContactInfo = MYSQL_GetContactInfoByOrder($_POST['MerchantTradeNo']);
+    if ($ContactInfo === false){
+    	return "";
+    }
     if ($isServer){
         Coupon_Used($ContactInfo['PromoCode']);
     }
@@ -385,7 +388,9 @@ function ECPay_ProcessPaymentServer(){
     */
     if (isset($_POST['CheckMacValue']) && $_POST['CheckMacValue'] == ECPay_GetMacValue($_POST)){
         MYSQL_AddPaymentResultServer($_POST['PaymentType'], $_POST['TradeAmt'], $_POST['RtnMsg'], json_encode($_POST, JSON_UNESCAPED_UNICODE), $_POST['MerchantTradeNo']);
-        ECPay_PrintReceipt(true, true);
+        if (isset($_POST['SimulatePaid']) && $_POST['SimulatePaid'] != "1"){
+	        ECPay_PrintReceipt(true, true);
+	}
         return "1|OK";
     }
     return "Fail";
@@ -576,11 +581,22 @@ function API_EmailOrder($OrderId, $promoCode=""){
 
 function API_processOrder($PaymentMethod="Credit", $promoCode="default"){
     global $EVENT_ID;
-    if (empty($_POST['Name']) || empty($_POST['EnglishName']) || empty($_POST['Phone']) || empty($_POST['Email']) || empty($_POST['PersonalId']) || empty($_POST['DOB']) || 
+    if (empty($_POST['Name']) || empty($_POST['EnglishName']) || empty($_POST['Phone']) || empty($_POST['Email']) || empty($_POST['PersonalId']) || empty($_POST['DOB']) || empty($_POST['Gender']) || 
         empty($_POST['EmerContactName']) || empty($_POST['EmerContactNum']) || empty($_POST['School']) || empty($_POST['TSAOfficerRole']) || empty($_POST['RepresentTSA'])){
         return API_ToJSON(false, array("msg" => "Missing field"));
     }
-    $ContactId = MYSQL_AddContactInfo($_POST['Name'], $_POST['EnglishName'], $_POST['Phone'], $_POST['Email'], $_POST['PersonalId'], $_POST['DOB'], 
+    
+    if ($_POST['Gender'] == "NULL"){
+        $_POST['Gender'] = "null";
+    }
+    else if ($_POST['Gender'] != "Male" && $_POST['Gender'] != "Female"){
+        return API_ToJSON(false, array("msg" => "Invalid gender"));
+    }
+    else{
+        $_POST['Gender'] = "'".$_POST['Gender']."'";
+    }
+    
+    $ContactId = MYSQL_AddContactInfo($_POST['Name'], $_POST['EnglishName'], $_POST['Phone'], $_POST['Email'], $_POST['PersonalId'], $_POST['DOB'], $_POST['Gender'], 
         $_POST['EmerContactName'], $_POST['EmerContactNum'], $_POST['School'], $_POST['TSAOfficerRole'], $_POST['RepresentTSA']
     );
     if (!$ContactId){
@@ -592,6 +608,9 @@ function API_processOrder($PaymentMethod="Credit", $promoCode="default"){
     $data = ECPay_NewOrder($result[0]['Name'], $result[0]['Description'], $sum, $PaymentMethod);
     if (isset($result[0]['Price']) && isset($result[1]['Price']) && $result[0]['Price'] + $result[1]['Price'] == $sum){
         $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $result[0]['Price'], $result[1]['Price'], $data);
+    }
+    else if (isset($result[0]['Price']) && isset($result[1]['Price']) && isset($result[2]['Price']) && $result[0]['Price'] + $result[1]['Price']$result[2]['Price'] == $sum){
+        $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $result[0]['Price']+$result[1]['Price'], $result[2]['Price'], $data);
     }
     else{
         $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $sum, 0, $data, $promoCode);
@@ -759,8 +778,10 @@ function MYSQL_GetContactInfoByOrder($OrderId){
         return $result->fetch_assoc();
     }
     else{
-        echo "Query: ".$query."\n";
-        echo "Error: " . $mysqli->error; // Fail
+        if (isset($debug) && $debug == true){
+            echo "Query: ".$query."\n";
+	    echo "Error: " . $mysqli->error; // Fail
+        }
         return false;
     }
 }
@@ -861,10 +882,10 @@ function MYSQL_AddEvent($EventName, $EventDate){
     */
 }
 
-function MYSQL_AddContactInfo($Name, $EnglishName, $Phone, $Email, $PersonalId, $DOB, $EmerContactName, $EmerContactNum, $School, $TSAOfficerRole, $RepresentTSA){
+function MYSQL_AddContactInfo($Name, $EnglishName, $Phone, $Email, $PersonalId, $DOB, $Gender, $EmerContactName, $EmerContactNum, $School, $TSAOfficerRole, $RepresentTSA){
     $query = "
-        INSERT INTO `ContactInfo` (Name, EnglishName, Phone, Email, PersonalId, DOB, EmerContactName, EmerContactNum, School, TSAOfficerRole, RepresentTSA)
-        VALUES ('$Name', '$EnglishName', '$Phone', '$Email', '$PersonalId', '$DOB', '$EmerContactName', '$EmerContactNum', '$School', '$TSAOfficerRole', '$RepresentTSA');
+        INSERT INTO `ContactInfo` (Name, EnglishName, Phone, Email, PersonalId, DOB, Gender, EmerContactName, EmerContactNum, School, TSAOfficerRole, RepresentTSA)
+        VALUES ('$Name', '$EnglishName', '$Phone', '$Email', '$PersonalId', '$DOB', $Gender, '$EmerContactName', '$EmerContactNum', '$School', '$TSAOfficerRole', '$RepresentTSA');
     ";
     return MYSQL_Insert($query);
     /*
@@ -965,6 +986,7 @@ function MYSQL_Init(){
         Email VARCHAR(200) NOT NULL,
         PersonalId VARCHAR(20) NOT NULL,
         DOB DATE,
+        Gender ENUM ('Male','Female'),
         EmerContactName VARCHAR(200) NOT NULL,
         EmerContactNum VARCHAR(20) NOT NULL,
         School VARCHAR(200) NOT NULL,
