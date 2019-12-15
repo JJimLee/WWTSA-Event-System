@@ -10,6 +10,7 @@ $Event_API_EndPoint = "https://event.worldwidetsa.org/api.php";
 $Event_Logo_URL = "https://free.com.tw/blog/wp-content/uploads/2014/08/Placekitten480-g.jpg";
 $Event_Logo_URL = "https://www.worldwidetsa.org/wp-content/uploads/2019/08/WWTSA-LOGO-new.png";
 $Event_Agreement_URL = "購票須知.pdf";
+$G_reCaptcha_key = "6LcJ1cMUAAAAAGRTzbbKuoVgpCd1WggnCfRpSiNz";
 
 $DevMode = false || (isset($_GET['debug']) && $_GET['debug'] == 1);
 $PromoCode = "";
@@ -57,6 +58,7 @@ if ($DevMode){
                 RepresentTSA: \${\$(\"#RepresentTSA\").val()}
                 PaymentMethod: \${\$(\"#PaymentMethod\").val()}
                 PromoCode: \${\$(\"#PromoCodeData\").val()}
+                GoogleToken: \${\$(\"#GoogleToken\").val()}
             `);";
     $DevMode_fillDemo = "
     function fillDemo(){
@@ -74,6 +76,7 @@ if ($DevMode){
         $(\"#RepresentTSA\").val(\"YES\")
         $(\"#PaymentMethod\").val(\"Credit\")
         $(\"#PromoCodeData\").val()
+        $(\"#GoogleToken\").val();
     }
     ";
 }
@@ -82,6 +85,16 @@ if ($DevMode){
 <!doctype html>
 <html lang="en">
 <head>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-152872318-2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'UA-152872318-2');
+    </script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" integrity="sha256-rByPlHULObEjJ6XQxW/flG2r+22R5dKiAoef+aXWfik=" crossorigin="anonymous" />
     <link rel="icon" href="https://www.worldwidetsa.org/wp-content/uploads/2019/08/cropped-WWTSA-LOGO-new-32x32.png" sizes="32x32">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
@@ -98,6 +111,13 @@ if ($DevMode){
                 <span class="text-muted">$${item.Price}NTD</span>
             </li>
         `;
+    }
+    function recaptcha_callback(token){
+        $("#GoogleToken").val(token);
+        $("#SubmitBtn").prop('disabled', false);
+    }
+    function recaptcha_expired_callback(){
+        $("#SubmitBtn").prop('disabled', true);
     }
     function retrieveOrder(){
         <?=$PaymentPage?>
@@ -186,7 +206,8 @@ if ($DevMode){
                                 TSAOfficerRole: $("#TSAOfficerRole").val(),
                                 RepresentTSA: $("#RepresentTSA").val(),
                                 PaymentMethod: $("#PaymentMethod").val(),
-                                PromoCode: $("#PromoCodeData").val()
+                                PromoCode: $("#PromoCodeData").val(),
+                                GoogleToken: $("#GoogleToken").val()
                             };
             $.ajax({
                 url: "<?=$Event_API_EndPoint?>",
@@ -428,8 +449,11 @@ if ($DevMode){
                   <label class="custom-control-label" for="agreement">本人已詳讀<a target="_blank" href="<?=$Event_Agreement_URL?>">活動辦法</a>與確認上述資料填寫無誤，且同意提供個人資料予主辦單位使用，同時主辦單位將尊重個人資料機密予以嚴格保密。</label>
                 </div>
                 <hr class="mb-4">
+                <div class="g-recaptcha" data-callback="recaptcha_callback" data-expired-callback="recaptcha_expired_callback" data-sitekey="<?=$G_reCaptcha_key?>"></div>
+                <hr class="mb-4">
                 <input id="PromoCodeData" type="hidden" name="promoCode">
-                <button id="SubmitBtn" class="btn btn-primary btn-lg btn-block" type="submit">確認訂購</button>
+                <input id="GoogleToken" type="hidden" name="GoogleToken">
+                <button id="SubmitBtn" class="btn btn-primary btn-lg btn-block" type="submit" disabled>確認訂購</button>
             </form>
         </div>
     </div>

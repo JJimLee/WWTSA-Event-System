@@ -1,0 +1,74 @@
+body{
+    background-color: black;
+    margin: 0;
+}
+div{
+    padding: 0px;
+    background: black;
+    text-align: center;
+}
+
+.background{
+    background-size: contain;
+    background-attachment: fixed;
+    width: 100%;
+    height: 100%;
+}
+
+header{
+    padding: 20px;
+    font-family: 'Noto Serif TC';
+    font-size: 150%;
+    letter-spacing: 5px;
+    width: 100%;
+    color: white;
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.QR{
+    padding: 20px;
+    position: absolute;
+    top: 160px;
+    width: 130px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+p{
+    margin: 20px 0px;
+    font-family: 'Noto Sans TC';
+    font-size: 12px;
+    letter-spacing: 4px;
+    line-height: 30px;
+    width: 80%;
+    color: white;
+    position: absolute;
+    top: 320px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.logo{
+    width: 220px;
+    position: absolute;
+    top: 465px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+h1{
+    margin: 20px 0px;
+    font-family: 'Noto Sans TC';
+    font-size: 12px;
+    letter-spacing: 2px;
+    line-height: 30px;
+    color: white;
+    width: 80%;
+    position: absolute;
+    top: 485px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}

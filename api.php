@@ -20,6 +20,12 @@ switch($_POST['action']){
         }
         break;
     case "createOrder":
+        if (empty($_POST['GoogleToken']) || !Google_reCaptcha_check($_POST['GoogleToken'])){
+            echo "Google reCaptcha Fail!!";
+            exit;
+        }
+        
+        
         // process data(Record to database)
         if(isset($_POST['PaymentMethod']) && isset($_POST['PromoCode']) && $_POST['PromoCode'] != ""){
             echo API_processOrder($_POST['PaymentMethod'], $_POST['PromoCode']);

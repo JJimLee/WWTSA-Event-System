@@ -13,6 +13,34 @@ if (empty($includeFunction) || !$includeFunction){
 include_once("config.php");
 include_once("MYSQLConnect.php");
 
+function curlPostJSON($url, $data){
+    $header = array(
+    );
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+    $result = curl_exec($ch);
+    curl_close($ch);
+    return json_decode($result, true);
+}
+
+function Google_reCaptcha_check($GoogleToken){
+    global $GoogleReCaptchaServerKey;
+    $result = curlPostJSON("https://www.google.com/recaptcha/api/siteverify", 
+        array(
+            "remoteip" => $_SERVER['REMOTE_ADDR'],
+            "secret" => $GoogleReCaptchaServerKey,
+            "response" => $GoogleToken
+        )
+    );
+    
+    return isset($result['success']) && $result['success'] && isset($result['hostname']) && $result['hostname'] == $_SERVER['HTTP_HOST'];
+}
 
 function ECPay_merchantSort($a, $b){
     return strcasecmp($a, $b);
@@ -113,7 +141,7 @@ function ECPay_PrintReceipt($EmailCopy = false, $isServer = false){
     if ($ContactInfo === false){
     	return "";
     }
-    if ($isServer){
+    if ($isServer && isset($_POST['RtnCode']) && $_POST['RtnCode'] == "1"){
         Coupon_Used($ContactInfo['PromoCode']);
     }
     if ($_POST['PaymentType'] == "Credit_CreditCard"){
@@ -407,6 +435,14 @@ function ECPay_ProcessPaymentCreated(){
 }
 
 function ECPay_SubmitForm($data){
+	if ($data['TotalAmount'] <= 0){
+		MYSQL_AddPaymentResultServer("免付款", $data['TotalAmount'], "交易成功", "{\"Type\":\"免付款\"}", $data['MerchantTradeNo']);
+		$price = MYSQL_GetOrderInfo($data['MerchantTradeNo']);
+		Coupon_Used($data['promoCode']);
+		$formHTML = "\t<button class=\"btn btn-success btn-lg btn-block\" type=\"submit\" disabled>免付款交易!</button>\n";
+        return $formHTML;
+	}
+	
     global $ECPay_PaymentEndPoint;
     $formHTML = "<form method='post' action='$ECPay_PaymentEndPoint'>\n";
     foreach($data as $key => $value){
@@ -606,11 +642,14 @@ function API_processOrder($PaymentMethod="Credit", $promoCode="default"){
     $result = API_getPackage($promoCode, $PaymentMethod);
     $sum = API_getOrderSum($result);
     $data = ECPay_NewOrder($result[0]['Name'], $result[0]['Description'], $sum, $PaymentMethod);
-    if (isset($result[0]['Price']) && isset($result[1]['Price']) && $result[0]['Price'] + $result[1]['Price'] == $sum){
+    if (isset($result[0]['Price']) && isset($result[1]['Price']) && $result[0]['Price'] + $result[1]['Price'] == 0){
+        $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $result[0]['Price']+$result[1]['Price'], 0, $data, $promoCode);
+    }
+    else if (isset($result[0]['Price']) && isset($result[1]['Price']) && $result[0]['Price'] + $result[1]['Price'] == $sum){
         $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $result[0]['Price'], $result[1]['Price'], $data);
     }
-    else if (isset($result[0]['Price']) && isset($result[1]['Price']) && isset($result[2]['Price']) && $result[0]['Price'] + $result[1]['Price']$result[2]['Price'] == $sum){
-        $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $result[0]['Price']+$result[1]['Price'], $result[2]['Price'], $data);
+    else if (isset($result[0]['Price']) && isset($result[1]['Price']) && isset($result[2]['Price']) && $result[0]['Price'] + $result[1]['Price'] + $result[2]['Price'] == $sum){
+        $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $result[0]['Price']+$result[1]['Price'], $result[2]['Price'], $data, $promoCode);
     }
     else{
         $orderResult = MYSQL_AddOrder($data['MerchantTradeNo'], $ContactId, $EVENT_ID, $sum, 0, $data, $promoCode);
@@ -620,7 +659,8 @@ function API_processOrder($PaymentMethod="Credit", $promoCode="default"){
         return API_ToJSON(false, array("msg" => "Error while insert Order"));
     }
     
-    $formHTML = ECPay_SubmitForm($data);
+	$formHTML = ECPay_SubmitForm($data);
+	
     MYSQL_AddPayment($data['MerchantTradeNo'], $formHTML);
     
     API_EmailOrder($data['MerchantTradeNo'], $promoCode);
@@ -628,7 +668,25 @@ function API_processOrder($PaymentMethod="Credit", $promoCode="default"){
     return API_ToJSON(true, array("html" => "$formHTML", "msg" => "Order '". $data['MerchantTradeNo'] ."' Created"));
 }
 
+function MYSQL_IsPaid($OrderId){
+    $query = "
+        SELECT COUNT(*) AS amount
+        FROM `ContactInfo`
+        JOIN `Order` ON `ContactInfo`.id = `Order`.ContactId
+        JOIN `Payment` ON `Order`.id = `Payment`.OrderId
+        JOIN `PaymentResultServer` ON `Payment`.OrderId = `PaymentResultServer`.OrderId
+        WHERE `PaymentResultServer`.Status = '交易成功' AND (`Order`.id = \"$OrderId\" OR `Order`.OriginalId = \"$OrderId\")
+    ";
+    $result = MYSQL_getData($query);
+    return isset($result[0]["amount"]) && $result[0]["amount"] != 0;
+}
+
 function API_getPaymentInfo($OriginalOrderId){
+    if (MYSQL_IsPaid($OriginalOrderId)){
+        $formHTML = "\t<button class=\"btn btn-success btn-lg btn-block\" type=\"submit\" disabled>已完成付款!</button>\n";
+        return API_ToJSON(true, array("html" => "$formHTML", "msg" => "Order '". $OriginalOrderId ."' has already paid"));
+    }
+    
     $data = ECPay_PayOrder(json_decode(MYSQL_GetReOrderInfo($OriginalOrderId), true));
     $OrderInfo = MYSQL_GetOrderInfo($OriginalOrderId);
     $orderResult = MYSQL_ReOrder($data['MerchantTradeNo'], $OrderInfo['ContactId'], $OrderInfo['EventId'], $OrderInfo['Price'], $OrderInfo['Fee'], $data, $OriginalOrderId, $OrderInfo['PromoCode']);
@@ -647,9 +705,9 @@ function API_getPaymentInfo($OriginalOrderId){
 
 function Coupon_add($name, $description, $type, $value, $totalCount, $remark="", $CouponCode=null, $active=true){
     if ($CouponCode == null){
-        $CouponCode = substr(strtoupper(md5(date("YmdHis").$MYSQL_Password)), 0, 6);
+        $CouponCode = strtoupper(bin2hex(random_bytes(3)));
     }
-    if ($type != "$" || $type != "%"){
+    if ($type != "$" && $type != "%"){
         echo "Invalid Coupon Type\n";
         return false;
     }
@@ -657,7 +715,10 @@ function Coupon_add($name, $description, $type, $value, $totalCount, $remark="",
         echo "Invalid Coupon Value";
         return false;
     }
-    return MYSQL_AddCoupon(strtoupper($CouponCode), $type, $value, $totalCount, $name, $description, $remark, $active);
+    if (MYSQL_AddCoupon(strtoupper($CouponCode), $type, $value, $totalCount, $name, $description, $remark, $active) === false){
+        return false;
+    }
+    return $CouponCode;
 }
 
 function Coupon_check($code){
@@ -754,6 +815,24 @@ function SMTP_Sender($Name, $Email, $Subject, $Content){
     }
 }
 
+function MYSQL_getData($query){
+    global $mysqli;
+    $result = mysqli_query($mysqli, $query);
+    
+    $output = array();
+    if ($result !== false && mysqli_num_rows($result) > 0){
+        while($output[] = $result->fetch_assoc()){
+            
+        }
+        return $output;
+    }
+    else{
+        echo "Query: ".$query."\n";
+        echo "Error: " . $mysqli->error; // Fail
+        return false;
+    }
+}
+
 function MYSQL_Insert($query){
     global $mysqli;
     if ($mysqli->query($query) === TRUE) {
@@ -829,6 +908,28 @@ function MYSQL_AddOrder($id, $ContactId, $EventId, $Price, $Fee, $data, $PromoCo
     $query = "
         INSERT INTO `Order` (id, ContactId, EventId, Price, Fee, data, PromoCode)
         VALUES ('$id', '$ContactId', '$EventId', '$Price', '$Fee', '".json_encode($data, JSON_UNESCAPED_UNICODE)."', '$PromoCode');
+    ";
+    return MYSQL_Insert($query);
+    /*
+        INSERT INTO table (name)
+        OUTPUT Inserted.ID
+        VALUES('');
+        
+        id VARCHAR(25) PRIMARY KEY,
+        ContactId INT(6),
+        EventId INT(6),
+        Price INT(6),
+        Fee INT(6),
+        PromoCode VARCHAR(50) NOT NULL,
+        data JSON,
+        OriginalId VARCHAR(25),
+        CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    */
+}
+
+function MYSQL_ChangeOrderFee($OrderId, $Fee){
+    $query = "
+        UPDATE `Order` SET `Fee` = $Fee WHERE `id` = '$OrderId'
     ";
     return MYSQL_Insert($query);
     /*
@@ -1101,7 +1202,7 @@ function MYSQL_Init(){
         TotalCount INT(6) NOT NULL,
         Name VARCHAR(200) NOT NULL,
         Description VARCHAR(200) NOT NULL,
-        Remark VARCHAR(200) NOT NULL,
+        Remark TEXT NOT NULL,
         Active BOOL NOT NULL DEFAULT false,
         IssueDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )";
