@@ -250,6 +250,81 @@ function displayAllSuccess(){
     echo "</table>";
     return true;
 }
+function displaySearchResult(search_text){
+    
+    $query = "
+        SELECT 
+            #`ContactInfo`.id, 
+            `ContactInfo`.Name, 
+            `ContactInfo`.EnglishName, 
+            `ContactInfo`.Phone, 
+            `ContactInfo`.Email, 
+            `ContactInfo`.PersonalId, 
+            `ContactInfo`.DOB, 
+            `ContactInfo`.Gender AS 性別, 
+            `ContactInfo`.EmerContactName AS 緊急人, 
+            `ContactInfo`.EmerContactNum AS 緊急電話, 
+            `ContactInfo`.School, 
+            `ContactInfo`.TSAOfficerRole AS TSA職稱, 
+            `ContactInfo`.RepresentTSA AS 代表TSA, 
+            `ContactInfo`.CreatedAt AS 下單時間, 
+            `Order`.id AS 訂單號碼,
+            `Order`.OriginalId AS 原始訂單號碼, 
+            `Order`.Price, 
+            `Order`.Fee, 
+            `Order`.PromoCode, 
+            `PaymentResultServer`.PaymentMethod, 
+            `PaymentResultServer`.TotalAmount, 
+            `PaymentResultServer`.Status AS 交易結果 
+        FROM `ContactInfo`
+        JOIN `Order` ON `ContactInfo`.id = `Order`.ContactId
+        JOIN `Payment` ON `Order`.id = `Payment`.OrderId
+        JOIN `PaymentResultServer` ON `Payment`.OrderId = `PaymentResultServer`.OrderId
+        WHERE `ContactInfo`.Name = "%search_text%"
+            OR `ContactInfo`.EnglishName = "%search_text%"
+            OR `ContactInfo`.Phone = "%search_text%"
+            OR `ContactInfo`.Email = "%search_text%"
+            OR `ContactInfo`.PersonalId = "%search_text%"
+            OR `ContactInfo`.DOB = "%search_text%"
+            OR `ContactInfo`.Gender = "%search_text%"
+            OR `ContactInfo`.EmerContactName = "%search_text%"
+            OR `ContactInfo`.EmerContactNum = "%search_text%"
+            OR `ContactInfo`.School = "%search_text%"
+            OR `ContactInfo`.id = "%search_text%"
+            OR `ContactInfo`.OriginalId = "%search_text%"
+            OR `ContactInfo`.Price = "%search_text%"
+            OR `ContactInfo`.Fee = "%search_text%"
+            OR `ContactInfo`.PromoCode = "%search_text%"
+            OR `ContactInfo`.PaymentMethod = "%search_text%"
+            OR `ContactInfo`.TotalAmount = "%search_text%"
+            OR `ContactInfo`.Status = "%search_text%"
+    ";
+    $result = MYSQL_getData($query);
+    if ($result === false){
+        return false;
+    }
+    
+    echo "<table border='1'>";
+    echo "<tr>";
+    foreach($result[0] as $key => $value){
+        echo "<th>$key</th>";
+    }
+    echo "</tr>";
+    
+    foreach($result as $row){
+        if (!is_array($row)){
+            continue;
+        }
+        echo "<tr>";
+        foreach($row as $key => $value){
+            echo "<td>$value</td>";
+        }
+        echo "</tr>";
+    }
+    echo "</table>";
+    return true;
+}
+
 if (isset($_POST['page'])){
     switch($_POST['page']){
         case "general":
@@ -262,7 +337,10 @@ if (isset($_POST['page'])){
             displayAllSuccess();
             break;
         case "detailSuccess":
-            displayAllDetailSuccess();
+            displayAllDetailSuccess(search_text);
+            break;
+        case "searchSuccess":
+            displaySearchResult();
             break;
         default:
             echo "Invalid POST";
@@ -282,6 +360,10 @@ else{
     <button class="pageChange" value="detail">詳細</button>
     <button class="pageChange" value="generalSuccess">一般(僅顯示交易成功)</button>
     <button class="pageChange" value="detailSuccess">詳細(僅顯示交易成功)</button>
+    
+    <textarea id="search_text" name="search_text" rows="2" cols="1000">
+    </textarea>
+    <button class="pageChange" value="searchSuccess">搜尋</button>
     <div id="mainData">
     <?php
     displayAll();
